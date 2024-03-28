@@ -10,7 +10,7 @@ void Properties::BatteryVoltage::parseAttribte(quint16, quint16 attributeId, con
     if (attributeId != 0x0020)
         return;
 
-    m_value = percentage(2850, 3200, static_cast <quint8> (data.at(0)) * 100);
+    m_value = percentage(2850, 3000, static_cast <quint8> (data.at(0)) * 100);
 }
 
 void Properties::BatteryPercentage::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
@@ -40,52 +40,34 @@ void Properties::Status::parseAttribte(quint16, quint16 attributeId, const QByte
     m_value = data.at(0) ? "on" : "off";
 }
 
-void Properties::PowerOnStatus::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0x4003)
-        return;
-
-    switch (static_cast <quint8> (data.at(0)))
-    {
-        case 0x00: m_value = "off"; break;
-        case 0x01: m_value = "on"; break;
-        case 0x02: m_value = "toggle"; break;
-        case 0xFF: m_value = "previous"; break;
-    }
-}
-
-void Properties::SwitchType::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0x0000)
-        return;
-
-    switch (static_cast <quint8> (data.at(0)))
-    {
-        case 0x00: m_value = "toggle"; break;
-        case 0x01: m_value = "momentary"; break;
-        case 0x02: m_value = "multifunction"; break;
-    }
-}
-
-void Properties::SwitchMode::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0x0010)
-        return;
-
-    switch (static_cast <quint8> (data.at(0)))
-    {
-        case 0x00: m_value = "on"; break;
-        case 0x01: m_value = "off"; break;
-        case 0x02: m_value = "toggle"; break;
-    }
-}
-
 void Properties::Level::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
 {
     if (attributeId != 0x0000)
         return;
 
     m_value = static_cast <quint8> (data.at(0));
+}
+
+void Properties::AnalogInput::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
+{
+    float value = 0;
+
+    if (attributeId != 0x0055 || static_cast <size_t> (data.length()) > sizeof(value))
+        return;
+
+    memcpy(&value, data.constData(), data.length());
+    m_value = qFromLittleEndian(value);
+}
+
+void Properties::AnalogOutput::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
+{
+    float value = 0;
+
+    if (attributeId != 0x0055 || static_cast <size_t> (data.length()) > sizeof(value))
+        return;
+
+    memcpy(&value, data.constData(), data.length());
+    m_value = qFromLittleEndian(value);
 }
 
 void Properties::CoverPosition::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
@@ -112,6 +94,53 @@ void Properties::CoverTilt::parseAttribte(quint16, quint16 attributeId, const QB
     map.insert("cover", value ? "open" : "closed");
     map.insert("tilt", value);
     m_value = map;
+}
+
+void Properties::Thermostat::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
+{
+    QMap <QString, QVariant> map = m_value.toMap();
+
+    switch (attributeId)
+    {
+        case 0x0000:
+        case 0x0012:
+        {
+            qint16 value = 0;
+
+            if (static_cast <size_t> (data.length()) > sizeof(value))
+                return;
+
+            memcpy(&value, data.constData(), data.length());
+            map.insert(attributeId ? "targetTemperature" : "temperature", qFromLittleEndian(value) / 100.0);
+            break;
+        }
+
+        case 0x0010:
+        {
+            map.insert("temperatureOffset", static_cast <qint8> (data.at(0)) / 10.0);
+            break;
+        }
+
+        case 0x001C:
+        {
+            switch (static_cast <quint8> (data.at(0)))
+            {
+                case 0x00: map.insert("systemMode", "off"); break;
+                case 0x01: map.insert("systemMode", "auto"); break;
+                case 0x04: map.insert("systemMode", "heat"); break;
+            }
+
+            break;
+        }
+
+        case 0x001E:
+        {
+            map.insert("heating", data.at(0) == 0x04 ? true : false);
+            break;
+        }
+    }
+
+    m_value = map.isEmpty() ? QVariant() : map;
 }
 
 void Properties::ColorHS::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
@@ -180,7 +209,7 @@ void Properties::Illuminance::parseAttribte(quint16, quint16 attributeId, const 
         return;
 
     memcpy(&value, data.constData(), data.length());
-    m_value = option().toString() == "raw" ? qFromLittleEndian(value) : static_cast <quint32> (value ? pow(10, (qFromLittleEndian(value) - 1) / 10000.0) : 0);
+    m_value = option().toMap().value("raw").toBool() ? qFromLittleEndian(value) : static_cast <quint32> (value ? pow(10, (qFromLittleEndian(value) - 1) / 10000.0) : 0);
 }
 
 void Properties::Temperature::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
@@ -229,6 +258,17 @@ void Properties::Occupancy::resetValue(void)
     m_value = false;
 }
 
+void Properties::OccupancyTimeout::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
+{
+    quint16 value;
+
+    if (attributeId != 0x0010 || static_cast <size_t> (data.length()) > sizeof(value))
+        return;
+
+    memcpy(&value, data.constData(), data.length());
+    m_value = qFromLittleEndian(value);
+}
+
 void Properties::Moisture::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
 {
     quint16 value = 0;
@@ -248,7 +288,8 @@ void Properties::CO2::parseAttribte(quint16, quint16 attributeId, const QByteArr
         return;
 
     memcpy(&value, data.constData(), data.length());
-    m_value = round(qFromLittleEndian(value) * 1000000);
+    value = qFromLittleEndian(value);
+    m_value = round(value < 1 ? value * 1000000 : value);
 }
 
 void Properties::PM25::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
@@ -310,70 +351,15 @@ void Properties::Power::parseAttribte(quint16, quint16 attributeId, const QByteA
     m_value = qFromLittleEndian(value) / divider;
 }
 
-void Properties::Thermostat::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    QMap <QString, QVariant> map = m_value.toMap();
-
-    switch (attributeId)
-    {
-        case 0x0000:
-        case 0x0012:
-        {
-            qint16 value = 0;
-
-            if (static_cast <size_t> (data.length()) > sizeof(value))
-                return;
-
-            memcpy(&value, data.constData(), data.length());
-            map.insert(attributeId ? "targetTemperature" : "temperature", qFromLittleEndian(value) / 100.0);
-            break;
-        }
-
-        case 0x0010:
-        {
-            map.insert("temperatureOffset", static_cast <qint8> (data.at(0)) / 10.0);
-            break;
-        }
-
-        case 0x001C:
-        {
-            switch (static_cast <quint8> (data.at(0)))
-            {
-                case 0x00: map.insert("systemMode", "off"); break;
-                case 0x01: map.insert("systemMode", "auto"); break;
-                case 0x04: map.insert("systemMode", "heat"); break;
-            }
-
-            break;
-        }
-
-        case 0x001E:
-        {
-            map.insert("heating", data.at(0) == 0x04 ? true : false);
-            break;
-        }
-    }
-
-    m_value = map.isEmpty() ? QVariant() : map;
-}
-
-void Properties::DisplayMode::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0x0000)
-        return;
-
-    m_value = data.at(0) ? "fahrenheit" : "celsius";
-}
-
 void Properties::Scene::parseCommand(quint16, quint8 commandId, const QByteArray &payload)
 {
     const recallSceneStruct *command = reinterpret_cast <const recallSceneStruct*> (payload.constData());
-    QVariant scene = option().toMap().value("name").toMap().value(QString::number(command->sceneId));
+    QVariant name = option().toMap().value("enum").toMap().value(QString::number(command->sceneId));
 
     if (commandId != 0x05)
         return;
 
-    m_value = scene.isValid() ? scene : command->sceneId;
+    m_value = name.isValid() ? name : command->sceneId;
 }
 
 void Properties::StatusAction::parseCommand(quint16, quint8 commandId, const QByteArray &)

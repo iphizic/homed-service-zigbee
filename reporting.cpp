@@ -7,6 +7,8 @@ void ReportingObject::registerMetaTypes(void)
     qRegisterMetaType <Reportings::DeviceTemperature>       ("deviceTemperatureReporting");
     qRegisterMetaType <Reportings::Status>                  ("statusReporting");
     qRegisterMetaType <Reportings::Level>                   ("levelReporting");
+    qRegisterMetaType <Reportings::AnalogInput>             ("analogInputReporting");
+    qRegisterMetaType <Reportings::AnalogOutput>            ("analogOutputReporting");
     qRegisterMetaType <Reportings::CoverPosition>           ("coverPositionReporting");
     qRegisterMetaType <Reportings::CoverTilt>               ("coverTiltReporting");
     qRegisterMetaType <Reportings::Thermostat>              ("thermostatReporting");
@@ -17,6 +19,7 @@ void ReportingObject::registerMetaTypes(void)
     qRegisterMetaType <Reportings::Temperature>             ("temperatureReporting");
     qRegisterMetaType <Reportings::Pressure>                ("pressureReporting");
     qRegisterMetaType <Reportings::Humidity>                ("humidityReporting");
+    qRegisterMetaType <Reportings::Occupancy>               ("occupancyReporting");
     qRegisterMetaType <Reportings::Moisture>                ("moistureReporting");
     qRegisterMetaType <Reportings::CO2>                     ("co2Reporting");
     qRegisterMetaType <Reportings::PM25>                    ("pm25Reporting");

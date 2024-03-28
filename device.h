@@ -89,7 +89,7 @@ class DeviceObject : public AbstractDeviceObject
 public:
 
     DeviceObject(const QByteArray &ieeeAddress, quint16 networkAddress, const QString name = QString(), bool removed = false) :
-        AbstractDeviceObject(name.isEmpty() ? ieeeAddress.toHex(':') : name), m_timer(new QTimer(this)), m_ieeeAddress(ieeeAddress), m_networkAddress(networkAddress), m_removed(removed), m_active(true), m_supported(false), m_descriptorReceived(false), m_endpointsReceived(false), m_interviewFinished(false), m_logicalType(LogicalType::EndDevice), m_manufacturerCode(0), m_powerSource(POWER_SOURCE_UNKNOWN), m_joinTime(0), m_lastSeen(0), m_linkQuality(0) {}
+        AbstractDeviceObject(name.isEmpty() ? ieeeAddress.toHex(':') : name), m_timer(new QTimer(this)), m_ieeeAddress(ieeeAddress), m_networkAddress(networkAddress), m_removed(removed), m_supported(false), m_descriptorReceived(false), m_endpointsReceived(false), m_interviewFinished(false), m_logicalType(LogicalType::EndDevice), m_manufacturerCode(0), m_powerSource(POWER_SOURCE_UNKNOWN), m_joinTime(0), m_lastSeen(0), m_linkQuality(0) {}
 
     inline QTimer *timer(void) { return m_timer; }
     inline QByteArray ieeeAddress(void) { return m_ieeeAddress; }
@@ -108,9 +108,6 @@ public:
 
     inline bool removed(void) { return m_removed; }
     inline void setRemoved(bool value) { m_removed = value; }
-
-    inline bool active(void) { return m_active; }
-    inline void setActive(bool value) { m_active = value; }
 
     inline bool supported(void) { return m_supported; }
     inline void setSupported(bool value) { m_supported = value; }
@@ -153,7 +150,7 @@ private:
     QByteArray m_ieeeAddress;
     quint16 m_networkAddress;
 
-    bool m_removed, m_active, m_supported, m_descriptorReceived, m_endpointsReceived, m_interviewFinished;
+    bool m_removed, m_supported, m_descriptorReceived, m_endpointsReceived, m_interviewFinished;
     quint8 m_interviewEndpointId, m_lqiRequestIndex;
 
     LogicalType m_logicalType;
@@ -184,6 +181,8 @@ public:
     inline void setPermitJoin(bool value) { m_permitJoin = value; }
 
     void init(void);
+    void storeDatabase(void);
+    void storeProperties(void);
 
     Device byName(const QString &name);
     Device byNetwork(quint16 networkAddress);
@@ -200,11 +199,9 @@ public:
 
     void removeDevice(const Device &device);
 
-    void storeDatabase(void);
-    void storeProperties(void);
-
 private:
 
+    QSettings *m_config;
     QTimer *m_databaseTimer, *m_propertiesTimer;
 
     QFile m_databaseFile, m_propertiesFile, m_optionsFile;
@@ -212,6 +209,7 @@ private:
     bool m_names, m_permitJoin, m_sync;
 
     QMap <QString, QVariant> m_exposeOptions;
+    QList <QString> m_specialExposes;
 
     void unserializeDevices(const QJsonArray &devices);
     void unserializeProperties(const QJsonObject &properties);

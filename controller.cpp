@@ -1,16 +1,19 @@
 #include "controller.h"
 #include "logger.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(configFile), m_avaliabilityTimer(new QTimer(this)), m_propertiesTimer(new QTimer(this)), m_zigbee(new ZigBee(getConfig(), this)), m_commands(QMetaEnum::fromType <Command> ())
+Controller::Controller(const QString &configFile) : HOMEd(configFile), m_avaliabilityTimer(new QTimer(this)), m_propertiesTimer(new QTimer(this)), m_zigbee(new ZigBee(getConfig(), this)), m_commands(QMetaEnum::fromType <Command> ()), m_networkStarted(false)
 {
     logInfo << "Starting version" << SERVICE_VERSION;
     logInfo << "Configuration file is" << getConfig()->fileName();
 
+    m_haPrefix = getConfig()->value("homeassistant/prefix", "homeassistant").toString();
     m_haStatus = getConfig()->value("homeassistant/status", "homeassistant/status").toString();
+    m_haEnabled = getConfig()->value("homeassistant/enabled", false).toBool();
 
     connect(m_avaliabilityTimer, &QTimer::timeout, this, &Controller::updateAvailability);
     connect(m_propertiesTimer, &QTimer::timeout, this, &Controller::updateProperties);
 
+    connect(m_zigbee, &ZigBee::networkStarted, this, &Controller::networkStarted);
     connect(m_zigbee, &ZigBee::deviceEvent, this, &Controller::deviceEvent);
     connect(m_zigbee, &ZigBee::endpointUpdated, this, &Controller::endpointUpdated);
     connect(m_zigbee, &ZigBee::statusUpdated, this, &Controller::statusUpdated);
@@ -24,12 +27,24 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_avaliab
 
 void Controller::publishExposes(DeviceObject *device, bool remove)
 {
-    device->publishExposes(this, device->ieeeAddress().toHex(':'), device->ieeeAddress().toHex(), remove);
+    device->publishExposes(this, device->ieeeAddress().toHex(':'), device->ieeeAddress().toHex(), m_haPrefix, m_haEnabled, m_zigbee->devices()->names(), remove);
 
     if (remove)
         return;
 
     m_propertiesTimer->start(UPDATE_PROPERTIES_DELAY);
+}
+
+void Controller::serviceOnline(void)
+{
+    for (auto it = m_zigbee->devices()->begin(); it != m_zigbee->devices()->end(); it++)
+        publishExposes(it.value().data());
+
+    if (m_haEnabled)
+        mqttPublishDiscovery("ZigBee", SERVICE_VERSION, m_haPrefix, true);
+
+    m_zigbee->devices()->storeDatabase();
+    mqttPublishStatus();
 }
 
 void Controller::quit(void)
@@ -40,16 +55,16 @@ void Controller::quit(void)
 
 void Controller::mqttConnected(void)
 {
-    logInfo << "MQTT connected";
-
     mqttSubscribe(mqttTopic("command/zigbee"));
     mqttSubscribe(mqttTopic("td/zigbee/#"));
 
-    if (getConfig()->value("homeassistant/enabled", false).toBool())
+    if (m_haEnabled)
         mqttSubscribe(m_haStatus);
 
-    for (auto it = m_zigbee->devices()->begin(); it != m_zigbee->devices()->end(); it++)
-        publishExposes(it.value().data());
+    if (!m_networkStarted)
+        return;
+
+    serviceOnline();
 }
 
 void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &topic)
@@ -77,20 +92,20 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 m_zigbee->togglePermitJoin();
                 break;
 
-            case Command::editDevice:
-                m_zigbee->editDevice(json.value("device").toString(), json.value("name").toString(), json.value("active").toBool(true));
+            case Command::updateDevice:
+                m_zigbee->updateDevice(json.value("device").toString(), json.value("name").toString(), json.value("note").toString(), json.value("active").toBool(true), json.value("discovery").toBool(true), json.value("cloud").toBool(true));
                 break;
 
             case Command::removeDevice:
                 m_zigbee->removeDevice(json.value("device").toString(), json.value("force").toBool());
                 break;
 
-            case Command::updateDevice:
-                m_zigbee->updateDevice(json.value("device").toString(), json.value("reportings").toBool());
+            case Command::setupDevice:
+                m_zigbee->setupDevice(json.value("device").toString(), json.value("reportings").toBool());
                 break;
 
-            case Command::updateReporting:
-                m_zigbee->updateReporting(json.value("device").toString(), static_cast <quint8> (json.value("endpointId").toInt()), json.value("reporting").toString(), static_cast <quint16> (json.value("minInterval").toInt()), static_cast <quint16> (json.value("maxInterval").toInt()), static_cast <quint16> (json.value("valueChange").toInt()));
+            case Command::setupReporting:
+                m_zigbee->setupReporting(json.value("device").toString(), static_cast <quint8> (json.value("endpointId").toInt()), json.value("reporting").toString(), static_cast <quint16> (json.value("minInterval").toInt()), static_cast <quint16> (json.value("maxInterval").toInt()), static_cast <quint16> (json.value("valueChange").toInt()));
                 break;
 
             case Command::bindDevice:
@@ -108,7 +123,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 break;
 
             case Command::otaUpgrade:
-                m_zigbee->otaUpgrade(json.value("device").toString(), static_cast <quint8> (json.value("endpointId").toInt()), json.value("fileName").toString());
+                m_zigbee->otaUpgrade(json.value("device").toString(), static_cast <quint8> (json.value("endpointId").toInt()), json.value("fileName").toString(), json.value("force").toBool());
                 break;
 
             case  Command::getProperties:
@@ -180,10 +195,11 @@ void Controller::updateAvailability(void)
 
         it.value()->setAvailability(it.value()->active() ? time - it.value()->lastSeen() <= timeout ? Availability::Online : Availability::Offline : Availability::Inactive);
 
-        if (it.value()->availability() == check)
+        if (it.value()->availability() == check && m_lastSeen.value(it.value()->ieeeAddress()) == it.value()->lastSeen())
             continue;
 
-        mqttPublish(mqttTopic("device/zigbee/%1").arg(m_zigbee->devices()->names() ? it.value()->name() : it.value()->ieeeAddress().toHex(':')), {{"status", it.value()->availability() != Availability::Inactive ? it.value()->availability() == Availability::Online ? "online" : "offline" : "inactive"}}, true);
+        mqttPublish(mqttTopic("device/zigbee/%1").arg(m_zigbee->devices()->names() ? it.value()->name() : it.value()->ieeeAddress().toHex(':')), {{"lastSeen", it.value()->lastSeen()}, {"status", it.value()->availability() == Availability::Online ? "online" : "offline"}}, true);
+        m_lastSeen.insert(it.value()->ieeeAddress(), it.value()->lastSeen());
     }
 }
 
@@ -203,6 +219,12 @@ void Controller::updateProperties(void)
     }
 }
 
+void Controller::networkStarted(void)
+{
+    m_networkStarted = true;
+    serviceOnline();
+}
+
 void Controller::deviceEvent(DeviceObject *device, ZigBee::Event event, const QJsonObject &json)
 {
     QMap <QString, QVariant> map = {{"device", device->name()}, {"event", m_zigbee->eventName(event)}};
@@ -220,7 +242,7 @@ void Controller::deviceEvent(DeviceObject *device, ZigBee::Event event, const QJ
             break;
 
         case ZigBee::Event::deviceUpdated:
-            mqttPublish(mqttTopic("device/zigbee/%1").arg(m_zigbee->devices()->names() ? device->name() : device->ieeeAddress().toHex(':')), {{"status", device->availability() != Availability::Inactive ? device->availability() == Availability::Online ? "online" : "offline" : "inactive"}}, true);
+            mqttPublish(mqttTopic("device/zigbee/%1").arg(m_zigbee->devices()->names() ? device->name() : device->ieeeAddress().toHex(':')), {{"lastSeen", device->lastSeen()}, {"status", device->availability() == Availability::Online ? "online" : "offline"}}, true);
             break;
 
         default:

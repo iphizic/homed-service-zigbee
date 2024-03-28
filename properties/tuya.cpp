@@ -36,7 +36,7 @@ QVariant PropertiesTUYA::Data::parseData(const tuyaHeaderStruct *header, const Q
 
             if (header->length == 4)
             {
-                quint32 value;
+                quint32 value = 0;
                 memcpy(&value, data.constData(), header->length);
                 return qFromBigEndian(value);
             }
@@ -76,7 +76,7 @@ void PropertiesTUYA::DataPoints::update(quint8 dataPoint, const QVariant &data)
             {
                 QList <QString> list = {"_TZE200_bcusnqt8", "_TZE200_lsanae15", "_TZE204_lsanae15"};
                 QByteArray payload = data.toByteArray();
-                quint16 value;
+                quint16 value = 0;
 
                 if (name != "elictricity")
                     break;
@@ -120,7 +120,7 @@ void PropertiesTUYA::DataPoints::update(quint8 dataPoint, const QVariant &data)
             case 2: // value
             {
                 bool hasMin, hasMax;
-                double min = options.value("min").toDouble(&hasMin), max = options.value("max").toDouble(&hasMax), value = data.toInt() / item.value("divider", 1).toDouble() + item.value("offset").toDouble();
+                double min = options.value("min").toDouble(&hasMin), max = options.value("max").toDouble(&hasMax), value = data.toInt() / item.value("divider", 1).toDouble() / item.value("propertyDivider", 1).toDouble() + item.value("offset").toDouble();
 
                 if (item.value("round").toBool())
                     value = round(value);
@@ -163,42 +163,50 @@ void PropertiesTUYA::DataPoints::update(quint8 dataPoint, const QVariant &data)
     m_value = map.isEmpty() ? QVariant() : map;
 }
 
-void PropertiesTUYA::WeekdayThermostatProgram::update(quint8 dataPoint, const QVariant &data)
+void PropertiesTUYA::HolidayThermostatProgram::update(quint8 dataPoint, const QVariant &data)
 {
     QMap <QString, QVariant> map = m_value.toMap();
 
-    if (dataPoint == 0x70)
+    if (dataPoint == 0x70 || dataPoint == 0x71)
     {
-        QList <QString> names = {"Hour", "Minute", "Temperature"};
+        QList <QString> types = {"weekday", "holiday"}, names = {"Hour", "Minute", "Temperature"};
+        QString type = types.value(dataPoint - 0x70);
         QByteArray program = data.toByteArray();
 
-        meta().insert("program", true);
+        meta().insert(QString("%1Program").arg(type), true);
 
         for (int i = 0; i < 18; i++)
         {
             quint8 value = static_cast <quint8> (program.at(i));
-            map.insert(QString("weekdayP%1%2").arg(i / 3 + 1).arg(names.value(i % 3)), value);
+            map.insert(QString("%1P%2%3").arg(type).arg(i / 3 + 1).arg(names.value(i % 3)), value);
         }
     }
 
     m_value = map.isEmpty() ? QVariant() : map;
 }
 
-void PropertiesTUYA::HolidayThermostatProgram::update(quint8 dataPoint, const QVariant &data)
+void PropertiesTUYA::DailyThermostatProgram::update(quint8 dataPoint, const QVariant &data)
 {
     QMap <QString, QVariant> map = m_value.toMap();
 
-    if (dataPoint == 0x71)
+    if (dataPoint >= 0x1C && dataPoint <= 0x22)
     {
-        QList <QString> names = {"Hour", "Minute", "Temperature"};
-        QByteArray program = data.toByteArray();
+        QList <QString> types = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+        QString type = types.value(dataPoint - 0x1C);
+        QByteArray program = data.toByteArray().mid(1);
 
-        meta().insert("program", true);
+        meta().insert(QString("%1Program").arg(type), true);
 
-        for (int i = 0; i < 18; i++)
+        for (int i = 0; i < 4; i++)
         {
-            quint8 value = static_cast <quint8> (program.at(i));
-            map.insert(QString("holidayP%1%2").arg(i / 3 + 1).arg(names.value(i % 3)), value);
+            QString key = QString("%1P%2").arg(type).arg(i + 1);
+            quint16 tempertarure;
+
+            memcpy(&tempertarure, program.constData() + i * 4 + 2, sizeof(tempertarure));
+
+            map.insert(QString("%1Hour").arg(key), static_cast <quint8> (program.at(i * 4)));
+            map.insert(QString("%1Minute").arg(key), static_cast <quint8> (program.at(i * 4 + 1)));
+            map.insert(QString("%1Temperature").arg(key), qFromBigEndian(tempertarure) / 10.0);
         }
     }
 
@@ -270,84 +278,6 @@ void PropertiesTUYA::ChildLock::parseAttribte(quint16, quint16 attributeId, cons
         return;
 
     m_value = data.at(0) ? true : false;
-}
-
-void PropertiesTUYA::OperationMode::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0x8004)
-        return;
-
-    switch (static_cast <quint8> (data.at(0)))
-    {
-        case 0x00: m_value = "command"; break;
-        case 0x01: m_value = "event"; break;
-    }
-}
-
-void PropertiesTUYA::IndicatorMode::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0x8001)
-        return;
-
-    switch (static_cast <quint8> (data.at(0)))
-    {
-        case 0x00: m_value = "off"; break;
-        case 0x01: m_value = "default"; break;
-        case 0x02: m_value = "inverted"; break;
-        case 0x03: m_value = "on"; break;
-    }
-}
-
-void PropertiesTUYA::SensitivityMode::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0x0013)
-        return;
-
-    switch (static_cast <quint8> (data.at(0)))
-    {
-        case 0x00: m_value = "low"; break;
-        case 0x01: m_value = "medium"; break;
-        case 0x02: m_value = "high"; break;
-    }
-}
-
-void PropertiesTUYA::TimeoutMode::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0xF001)
-        return;
-
-    switch (static_cast <quint8> (data.at(0)))
-    {
-        case 0x00: m_value = "30s"; break;
-        case 0x01: m_value = "60s"; break;
-        case 0x02: m_value = "120s"; break;
-    }
-}
-
-void PropertiesTUYA::SwitchType::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0xD030)
-        return;
-
-    switch (static_cast <quint8> (data.at(0)))
-    {
-        case 0x00: m_value = "toggle"; break;
-        case 0x01: m_value = "static"; break;
-        case 0x02: m_value = "momentary"; break;
-    }
-}
-
-void PropertiesTUYA::PowerOnStatus::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0x8002)
-        return;
-
-    switch (static_cast <quint8> (data.at(0)))
-    {
-        case 0x00: m_value = "off"; break;
-        case 0x01: m_value = "on"; break;
-        case 0x02: m_value = "previous"; break;
-    }
 }
 
 void PropertiesTUYA::ButtonAction::parseCommand(quint16, quint8 commandId, const QByteArray &payload)

@@ -96,6 +96,24 @@ namespace Reportings
 
     };
 
+    class AnalogInput : public ReportingObject
+    {
+
+    public:
+
+        AnalogInput(void) :  ReportingObject("analogInput", CLUSTER_ANALOG_INPUT, 0x0055, DATA_TYPE_SINGLE_PRECISION, 0, 600) {}
+
+    };
+
+    class AnalogOutput : public ReportingObject
+    {
+
+    public:
+
+        AnalogOutput(void) :  ReportingObject("analogOutput", CLUSTER_ANALOG_OUTPUT, 0x0055, DATA_TYPE_SINGLE_PRECISION, 0, 600) {}
+
+    };
+
     class CoverPosition : public ReportingObject
     {
 
@@ -183,6 +201,15 @@ namespace Reportings
     public:
 
         Humidity(void) : ReportingObject("humidity", CLUSTER_HUMIDITY_MEASUREMENT, 0x0000, DATA_TYPE_16BIT_UNSIGNED, 10, 3600, 10) {}
+
+    };
+
+    class Occupancy : public ReportingObject
+    {
+
+    public:
+
+        Occupancy(void) : ReportingObject("occupancy", CLUSTER_OCCUPANCY_SENSING, 0x0000, DATA_TYPE_8BIT_BITMAP, 0, 600) {}
 
     };
 

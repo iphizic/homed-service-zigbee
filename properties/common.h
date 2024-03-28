@@ -46,42 +46,32 @@ namespace Properties
 
     };
 
-    class PowerOnStatus : public PropertyObject
-    {
-
-    public:
-
-        PowerOnStatus(void) : PropertyObject("powerOnStatus", CLUSTER_ON_OFF) {}
-        void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
-
-    };
-
-    class SwitchType : public PropertyObject
-    {
-
-    public:
-
-        SwitchType(void) : PropertyObject("switchType", CLUSTER_SWITCH_CONFIGURATION) {}
-        void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
-
-    };
-
-    class SwitchMode : public PropertyObject
-    {
-
-    public:
-
-        SwitchMode(void) : PropertyObject("switchMode", CLUSTER_SWITCH_CONFIGURATION) {}
-        void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
-
-    };
-
     class Level : public PropertyObject
     {
 
     public:
 
         Level(void) : PropertyObject("level", CLUSTER_LEVEL_CONTROL) {}
+        void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
+
+    };
+
+    class AnalogInput : public PropertyObject
+    {
+
+    public:
+
+        AnalogInput(void) : PropertyObject("analogInput", CLUSTER_ANALOG_INPUT) {}
+        void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
+
+    };
+
+    class AnalogOutput : public PropertyObject
+    {
+
+    public:
+
+        AnalogOutput(void) : PropertyObject("analogOutput", CLUSTER_ANALOG_OUTPUT) {}
         void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
 
     };
@@ -102,6 +92,16 @@ namespace Properties
     public:
 
         CoverTilt(void) : PropertyObject("tilt", CLUSTER_WINDOW_COVERING) {}
+        void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
+
+    };
+
+    class Thermostat : public PropertyObject
+    {
+
+    public:
+
+        Thermostat(void) : PropertyObject("thermostat", CLUSTER_THERMOSTAT) {}
         void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
 
     };
@@ -195,6 +195,16 @@ namespace Properties
 
     };
 
+    class OccupancyTimeout : public PropertyObject
+    {
+
+    public:
+
+        OccupancyTimeout(void) : PropertyObject("occupancyTimeout", CLUSTER_OCCUPANCY_SENSING) {}
+        void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
+
+    };
+
     class Moisture : public PropertyObject
     {
 
@@ -265,26 +275,6 @@ namespace Properties
 
     };
     
-    class Thermostat : public PropertyObject
-    {
-
-    public:
-        
-        Thermostat(void) : PropertyObject("thermostat", CLUSTER_THERMOSTAT) {}
-        void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
-
-    };
-
-    class DisplayMode : public PropertyObject
-    {
-
-    public:
-
-        DisplayMode(void) : PropertyObject("displayMode", CLUSTER_THERMOSTAT_UI_CONFIGURATION) {}
-        void parseAttribte(quint16 clusterId, quint16 attributeId, const QByteArray &data) override;
-
-    };
-
     class Scene : public PropertyObject
     {
 
@@ -332,6 +322,51 @@ namespace Properties
 
         ColorAction(void) : PropertyObject("action", CLUSTER_COLOR_CONTROL) {}
         void parseCommand(quint16 clusterId, quint8 commandId, const QByteArray &payload) override;
+
+    };
+
+    class PowerOnStatus : public EnumProperty
+    {
+
+    public:
+
+        PowerOnStatus(void) : EnumProperty("powerOnStatus", CLUSTER_ON_OFF, 0x4003) {}
+
+    };
+
+    class SwitchType : public EnumProperty
+    {
+
+    public:
+
+        SwitchType(void) : EnumProperty("switchType", CLUSTER_SWITCH_CONFIGURATION, 0x0000) {}
+
+    };
+
+    class SwitchMode : public EnumProperty
+    {
+
+    public:
+
+        SwitchMode(void) : EnumProperty("switchMode", CLUSTER_SWITCH_CONFIGURATION, 0x0010) {}
+
+    };
+
+    class FanMode : public EnumProperty
+    {
+
+    public:
+
+        FanMode(void) : EnumProperty("fanMode", CLUSTER_FAN_CONTROL, 0x0000) {}
+
+    };
+
+    class DisplayMode : public EnumProperty
+    {
+
+    public:
+
+        DisplayMode(void) : EnumProperty("displayMode", CLUSTER_THERMOSTAT_UI_CONFIGURATION, 0x0000) {}
 
     };
 }

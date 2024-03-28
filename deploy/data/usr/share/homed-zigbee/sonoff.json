@@ -19,8 +19,8 @@
       "endpointId":     [1, 2]
     },
     {
-      "description":    "Sonoff Temperature and Humidity Sensor SNZB-02",
-      "modelNames":     ["TH01"],
+      "description":    "Sonoff Temperature and Humidity Sensor SNZB-02 or SNZB-02P",
+      "modelNames":     ["SNZB-02P", "TH01"],
       "properties":     ["batteryPercentage", "temperature", "humidity"],
       "bindings":       ["battery", "temperature", "humidity"],
       "reportings":     ["batteryPercentage", "temperature", "humidity"],
@@ -45,11 +45,11 @@
     {
       "description":    "Sonoff Wireless Button SNZB-01",
       "modelNames":     ["WB01", "WB-01"],
-      "properties":     ["batteryPercentage", "sonoffButtonAction"],
+      "properties":     ["batteryPercentage", "customCommands"],
       "bindings":       ["battery", "status"],
       "reportings":     ["batteryPercentage"],
       "exposes":        ["battery", "action"],
-      "options":        {"action": {"trigger": ["singleClick", "doubleClick", "hold"]}}
+      "options":        {"customCommands": {"action": {"clusterId": 6}}, "action": {"enum": ["hold", "doubleClick", "singleClick"]}}
     }
   ],
 
@@ -75,8 +75,23 @@
       "modelNames":     ["ZBMINI-L", "ZBMINIL2"],
       "properties":     ["status", "powerOnStatus"],
       "actions":        ["status", "powerOnStatus"],
-      "exposes":        ["switch", "powerOnStatus"],
-      "options":        {"powerOnStatus": {"enum": ["on", "off", "toggle", "previous"]}}
+      "exposes":        ["switch", "powerOnStatus"]
+    },
+    {
+      "description":    "Sonoff Motion Sensor SNZB-06P",
+      "modelNames":     ["SNZB-06P"],
+      "properties":     ["occupancy", "customAttributes"],
+      "actions":        ["customAttributes"],
+      "exposes":        ["occupancy", "occupancyTimeout", "sensitivityMode"],
+      "options":        {
+                          "customAttributes":
+                          {
+                            "occupancyTimeout": {"type": "value", "clusterId": 1030, "attributeId": 32, "dataType": 33, "action": true},
+                            "sensitivityMode":  {"type": "enum",  "clusterId": 1030, "attributeId": 34, "dataType": 32, "action": true}
+                          },
+                          "occupancyTimeout": {"min": 15, "max": 7200},
+                          "sensitivityMode": {"enum": {"1": "low", "2": "medium", "3": "high"}}
+                        }
     }
   ]
 }

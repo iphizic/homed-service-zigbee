@@ -50,13 +50,13 @@ void PropertiesLUMI::Data::parseData(quint16 dataPoint, const QByteArray &data, 
                 break;
 
             memcpy(&value, data.constData(), data.length());
-            map.insert("battery", percentage(2850, 3200, qFromLittleEndian(value)));
+            map.insert("battery", percentage(2850, 3000, qFromLittleEndian(value)));
             break;
         }
 
         case 0x0003:
         {
-            QList <QString> list = {"lumi.airrtc.agl001", "lumi.magnet.acn001", "lumi.remote.b286opcn01", "lumi.remote.b486opcn01", "lumi.remote.b686opcn01", "lumi.remote.cagl02", "lumi.sen_ill.mgl01", "lumi.sensor_smoke.acn03"};
+            QList <QString> list = {"lumi.airrtc.agl001", "lumi.remote.b286opcn01", "lumi.remote.b486opcn01", "lumi.remote.b686opcn01", "lumi.sen_ill.mgl01"};
 
             if (list.contains(modelName()))
                 break;
@@ -84,24 +84,7 @@ void PropertiesLUMI::Data::parseData(quint16 dataPoint, const QByteArray &data, 
             if (!list.contains(modelName()))
                 break;
 
-            switch (static_cast <quint8> (data.at(0)))
-            {
-                case 0x00: map.insert("operationMode", "command"); break;
-                case 0x01: map.insert("operationMode", "event"); break;
-            }
-
-            break;
-        }
-
-        case 0x0064:
-        {
-            quint32 value = 0;
-
-            if (modelName() != "lumi.sen_ill.mgl01" || static_cast <size_t> (data.length()) > sizeof(value))
-                break;
-
-            memcpy(&value, data.constData(), data.length());
-            map.insert("illuminance", qFromLittleEndian(value));
+            map.insert("operationMode", enumValue("operationMode", static_cast <quint8> (data.at(0))));
             break;
         }
 
@@ -121,31 +104,13 @@ void PropertiesLUMI::Data::parseData(quint16 dataPoint, const QByteArray &data, 
             if (modelName() != "lumi.motion.ac01")
                 break;
 
-            if (dataPoint != 0x0066 ? dataPoint == 0x010C : version() >= 50)
+            if (dataPoint != 0x0066 ? dataPoint != 0x010C : version() < 50)
             {
-                switch (static_cast <quint8> (data.at(0)))
-                {
-                    case 0x01: map.insert("sensitivityMode", "low"); break;
-                    case 0x02: map.insert("sensitivityMode", "medium"); break;
-                    case 0x03: map.insert("sensitivityMode", "high"); break;
-                }
-            }
-            else
-            {
-                switch (static_cast <quint8> (data.at(0)))
-                {
-                    case 0x00: map.insert("event", "enter"); break;
-                    case 0x01: map.insert("event", "leave"); break;
-                    case 0x02: map.insert("event", "enterLeft"); break;
-                    case 0x03: map.insert("event", "leaveRight"); break;
-                    case 0x04: map.insert("event", "enterRight"); break;
-                    case 0x05: map.insert("event", "leaveLeft"); break;
-                    case 0x06: map.insert("event", "approach"); break;
-                    case 0x07: map.insert("event", "absent"); break;
-                }
-
+                map.insert("event", enumValue("event", static_cast <quint8> (data.at(0))));
                 map.insert("occupancy", data.at(0) != 0x01 ? true : false);
             }
+            else
+                map.insert("sensitivityMode", enumValue("sensitivityMode", static_cast <quint8> (data.at(0))));
 
             break;
         }
@@ -156,12 +121,7 @@ void PropertiesLUMI::Data::parseData(quint16 dataPoint, const QByteArray &data, 
             if (modelName() != "lumi.motion.ac01")
                 break;
 
-            switch (static_cast <quint8> (data.at(0)))
-            {
-                case 0x00: map.insert("detectionMode", "undirected"); break;
-                case 0x01: map.insert("detectionMode", "directed"); break;
-            }
-
+            map.insert("detectionMode", enumValue("detectionMode", static_cast <quint8> (data.at(0))));
             break;
         }
 
@@ -171,13 +131,7 @@ void PropertiesLUMI::Data::parseData(quint16 dataPoint, const QByteArray &data, 
             if (modelName() != "lumi.motion.ac01")
                 break;
 
-            switch (static_cast <quint8> (data.at(0)))
-            {
-                case 0x00: map.insert("distanceMode", "far"); break;
-                case 0x01: map.insert("distanceMode", "middle"); break;
-                case 0x02: map.insert("distanceMode", "near"); break;
-            }
-
+            map.insert("distanceMode", enumValue("distanceMode", static_cast <quint8> (data.at(0))));
             break;
         }
 
@@ -231,12 +185,7 @@ void PropertiesLUMI::Data::parseData(quint16 dataPoint, const QByteArray &data, 
 
         case 0x00F0:
         {
-            switch (static_cast <quint8> (data.at(0)))
-            {
-                case 0x00: map.insert("indicatorMode", "default"); break;
-                case 0x01: map.insert("indicatorMode", "inverted"); break;
-            }
-
+            map.insert("indicatorMode", enumValue("indicatorMode", static_cast <quint8> (data.at(0))));
             break;
         }
 
@@ -261,12 +210,7 @@ void PropertiesLUMI::Data::parseData(quint16 dataPoint, const QByteArray &data, 
             if (!m_multiple && list.contains(modelName()))
                 break;
 
-            switch (static_cast <quint8> (data.at(0)))
-            {
-                case 0x00: map.insert("switchMode", "decoupled"); break;
-                case 0x01: map.insert("switchMode", "relay"); break;
-            }
-
+            map.insert("switchMode", enumValue("switchMode", static_cast <quint8> (data.at(0))));
             break;
         }
 
@@ -274,78 +218,6 @@ void PropertiesLUMI::Data::parseData(quint16 dataPoint, const QByteArray &data, 
         case 0xFF19:
         {
             map.insert("statusMemory", data.at(0) ? true : false);
-            break;
-        }
-
-        case 0x0271:
-        {
-            if (modelName() != "lumi.airrtc.agl001")
-                break;
-
-            map.insert("systemMode", data.at(0) ? "heat" : "off");
-            break;
-        }
-
-        case 0x0272:
-        {
-            if (modelName() != "lumi.airrtc.agl001")
-                break;
-
-            switch (static_cast <quint8> (data.at(0)))
-            {
-                case 0x00: map.insert("operationMode", "manual"); break;
-                case 0x01: map.insert("operationMode", "away"); break;
-                case 0x02: map.insert("operationMode", "program"); break;
-            }
-            
-            break;
-        }
-
-        case 0x0273:
-        {
-            if (modelName() != "lumi.airrtc.agl001")
-                break;
-            
-            map.insert("windowDetection", data.at(0) ? true : false);
-            break;
-        }
-
-        case 0x0277:
-        {
-            if (modelName() != "lumi.airrtc.agl001")
-                break;
-            
-            map.insert("childLock", data.at(0) ? true : false);
-            break;
-        }
-
-        case 0x0279:
-        {
-            quint32 value = 0;
-
-            if (modelName() != "lumi.airrtc.agl001")
-                break;
-
-            memcpy(&value, data.constData(), sizeof(value));
-            map.insert("awayTemperature", qFromLittleEndian(value) / 100.0);
-            break;
-        }
-
-        case 0x027A:
-        {
-            if (modelName() != "lumi.airrtc.agl001")
-                break;
-
-            map.insert("windowOpen", data.at(0) ? true : false);
-            break;
-        }
-
-        case 0x027E:
-        {
-            if (modelName() != "lumi.airrtc.agl001")
-                break;
-
-            map.insert("sensorType", data.at(0) ? "external" : "internal");
             break;
         }
 
@@ -357,7 +229,7 @@ void PropertiesLUMI::Data::parseData(quint16 dataPoint, const QByteArray &data, 
                 break;
 
             memcpy(&value, data.constData() + 5, sizeof(value));
-            map.insert("battery", percentage(2850, 3200, qFromLittleEndian(value)));
+            map.insert("battery", percentage(2850, 3000, qFromLittleEndian(value)));
             break;
         }
 
@@ -398,29 +270,9 @@ void PropertiesLUMI::ButtonMode::parseAttribte(quint16, quint16 attributeId, con
     m_value = map.isEmpty() ? QVariant() : map;
 }
 
-void PropertiesLUMI::SwitchType::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0x000A)
-        return;
-
-    switch (static_cast <quint8> (data.at(0)))
-    {
-        case 0x01: m_value = "toggle"; break;
-        case 0x02: m_value = "momentary"; break;
-    }
-}
-
 void PropertiesLUMI::Contact::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
 {
     if (attributeId != 0x0000)
-        return;
-
-    m_value = data.at(0) ? true : false;
-}
-
-void PropertiesLUMI::Interlock::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    if (attributeId != 0xFF06)
         return;
 
     m_value = data.at(0) ? true : false;
@@ -434,7 +286,7 @@ void PropertiesLUMI::Power::parseAttribte(quint16, quint16 attributeId, const QB
         return;
 
     memcpy(&value, data.constData(), data.length());
-    m_value = round(qFromLittleEndian(value) * 100) / 100;
+    m_value = qFromLittleEndian(value);
 }
 
 void PropertiesLUMI::Cover::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
@@ -455,18 +307,6 @@ void PropertiesLUMI::Cover::parseAttribte(quint16, quint16 attributeId, const QB
     map.insert("position", value);
     m_value = map;
 }
-
-void PropertiesLUMI::Illuminance::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
-{
-    quint16 value = 0;
-
-    if (attributeId != 0x0000 || static_cast <size_t> (data.length()) > sizeof(value))
-        return;
-
-    memcpy(&value, data.constData(), data.length());
-    m_value = qFromLittleEndian(value);
-}
-
 
 void PropertiesLUMI::ButtonAction::parseAttribte(quint16, quint16 attributeId, const QByteArray &data)
 {
@@ -597,7 +437,7 @@ void PropertiesLUMI::Vibration::parseAttribte(quint16, quint16 attributeId, cons
 
         case 0x0508:
         {
-            quint64 value;
+            quint64 value = 0;
             qint16 x, y, z;
 
             if (static_cast <size_t> (data.length()) > sizeof(value))

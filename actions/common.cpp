@@ -8,28 +8,6 @@ QByteArray Actions::Status::request(const QString &, const QVariant &data)
     return command < 0 ? QByteArray() : zclHeader(FC_CLUSTER_SPECIFIC, m_transactionId++, static_cast <quint8> (command));
 }
 
-QByteArray Actions::PowerOnStatus::request(const QString &, const QVariant &data)
-{
-    qint8 value = listIndex({"off", "on", "toggle", "previous"}, data);
-
-    if (value < 0 || value > 2)
-        value = 0xFF;
-
-    return writeAttribute(DATA_TYPE_8BIT_ENUM, &value, sizeof(value));
-}
-
-QByteArray Actions::SwitchType::request(const QString &, const QVariant &data)
-{
-    qint8 value = listIndex({"toggle", "momentary", "multifunction"}, data);
-    return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_ENUM, &value, sizeof(value));
-}
-
-QByteArray Actions::SwitchMode::request(const QString &, const QVariant &data)
-{
-    qint8 value = listIndex({"on", "off", "toggle"}, data);
-    return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_ENUM, &value, sizeof(value));
-}
-
 QByteArray Actions::Level::request(const QString &, const QVariant &data)
 {
     switch (data.type())
@@ -82,6 +60,12 @@ QByteArray Actions::Level::request(const QString &, const QVariant &data)
     }
 }
 
+QByteArray Actions::AnalogOutput::request(const QString &, const QVariant &data)
+{
+    float value = qToLittleEndian(data.toFloat());
+    return writeAttribute(DATA_TYPE_SINGLE_PRECISION, &value, sizeof(value));
+}
+
 QByteArray Actions::CoverStatus::request(const QString &, const QVariant &data)
 {
     QList <QString> list = option("invertCover").toBool() ? QList <QString> {"close", "open", "stop"} : QList <QString> {"open", "close", "stop"};
@@ -117,6 +101,41 @@ QByteArray Actions::CoverTilt::request(const QString &, const QVariant &data)
         value = 100 - value;
 
     return zclHeader(FC_CLUSTER_SPECIFIC, m_transactionId++, 0x08).append(reinterpret_cast <char*> (&value), sizeof(value));
+}
+
+QByteArray Actions::Thermostat::request(const QString &name, const QVariant &data)
+{
+    int index = m_actions.indexOf(name);
+
+    switch (index)
+    {
+        case 0: // temperatureOffset
+        {
+            qint8 value = static_cast <qint8> (data.toDouble() * 10);
+            m_attributes = {0x0010};
+            return writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
+        }
+
+        case 1: // targetTemperature
+        {
+            qint16 value = qToLittleEndian <qint16> (data.toDouble() * 100);
+            m_attributes = {0x0012};
+            return writeAttribute(DATA_TYPE_16BIT_SIGNED, &value, sizeof(value));
+        }
+
+        case 2: // systemMode
+        {
+            qint8 value = listIndex({"off", "auto", "heat"}, data);
+
+            if (value == 2)
+                value = 0x04;
+
+            m_attributes = {0x001C};
+            return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_ENUM, &value, sizeof(value));
+        }
+    }
+
+    return QByteArray();
 }
 
 QByteArray Actions::ColorHS::request(const QString &, const QVariant &data)
@@ -224,43 +243,8 @@ QByteArray Actions::ColorTemperature::request(const QString &, const QVariant &d
     }
 }
 
-QByteArray Actions::Thermostat::request(const QString &name, const QVariant &data)
+QByteArray Actions::OccupancyTimeout::request(const QString &, const QVariant &data)
 {
-    int index = m_actions.indexOf(name);
-
-    switch (index)
-    {
-        case 0: // temperatureOffset
-        {
-            qint8 value = static_cast <qint8> (data.toDouble() * 10);
-            m_attributes = {0x0010};
-            return writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-        }
-
-        case 1: // targetTemperature
-        {
-            qint16 value = qToLittleEndian <qint16> (data.toDouble() * 100);
-            m_attributes = {0x0012};
-            return writeAttribute(DATA_TYPE_16BIT_SIGNED, &value, sizeof(value));
-        }
-
-        case 2: // systemMode
-        {
-            qint8 value = listIndex({"off", "auto", "heat"}, data);
-
-            if (value == 2)
-                value = 0x04;
-
-            m_attributes = {0x001C};
-            return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_ENUM, &value, sizeof(value));
-        }
-    }
-
-    return QByteArray();
-}
-
-QByteArray Actions::DisplayMode::request(const QString &, const QVariant &data)
-{
-    qint8 value = listIndex({"celsius", "fahrenheit"}, data);
-    return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_ENUM, &value, sizeof(value));
+    quint16 value = qToLittleEndian <quint16> (data.toInt());
+    return writeAttribute(DATA_TYPE_16BIT_UNSIGNED, &value, sizeof(value));
 }

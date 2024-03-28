@@ -127,17 +127,17 @@ public:
     void setPermitJoin(bool enabled);
     void togglePermitJoin(void);
 
-    void editDevice(const QString &deviceName, const QString &name, bool active);
+    void updateDevice(const QString &deviceName, const QString &name, const QString &note, bool active, bool discovery, bool cloud);
     void removeDevice(const QString &deviceName, bool force);
-
-    void updateDevice(const QString &deviceName, bool reportings);
-    void updateReporting(const QString &deviceName, quint8 endpointId, const QString &reportingName, quint16 minInterval, quint16 maxInterval, quint16 valueChange);
+    
+    void setupDevice(const QString &deviceName, bool reportings);
+    void setupReporting(const QString &deviceName, quint8 endpointId, const QString &reportingName, quint16 minInterval, quint16 maxInterval, quint16 valueChange);
 
     void bindingControl(const QString &deviceName, quint8 endpointId, quint16 clusterId, const QVariant &dstAddress, quint8 dstEndpointId, bool unbind);
     void groupControl(const QString &deviceName, quint8 endpointId, quint16 groupId, bool remove);
     void removeAllGroups(const QString &deviceName, quint8 endpointId);
 
-    void otaUpgrade(const QString &deviceName, quint8 endpointId, const QString &fileName);
+    void otaUpgrade(const QString &deviceName, quint8 endpointId, const QString &fileName, bool force);
     void getProperties(const QString &deviceName);
 
     void clusterRequest(const QString &deviceName, quint8 endpointId, quint16 clusterId, quint16 manufacturerCode, quint8 commandId, const QByteArray &payload, bool global);
@@ -151,15 +151,19 @@ private:
     QSettings *m_config;
     QTimer *m_requestTimer, *m_neignborsTimer, *m_pingTimer, *m_statusLedTimer;
 
-    DeviceList *m_devices;
     Adapter *m_adapter;
+    DeviceList *m_devices;
 
     QMetaEnum m_events;
     quint8 m_requestId, m_requestStatus, m_replyId, m_interPanChannel;
     bool m_replyReceived, m_interPanLock;
 
-    QString m_statusLedPin, m_blinkLedPin, m_otaUpgradeFile;
-    bool m_debug;
+    QString m_statusLedPin, m_blinkLedPin;
+    bool m_discovery, m_cloud, m_debug;
+
+    Device m_otaDevice;
+    QFile m_otaFile;
+    bool m_otaForce;
 
     QMap <quint8, Request> m_requests;
 
@@ -186,6 +190,7 @@ private:
     void interviewTimeoutHandler(const Device &device);
     void rejoinHandler(const Device &device);
 
+    void otaError(const Endpoint &endpoint, quint16 manufacturerCode, quint8 transactionId, quint8 commandId, const QString &error = QString());
     void blink(quint16 timeout);
 
 private slots:
@@ -213,6 +218,7 @@ private slots:
 
 signals:
 
+    void networkStarted(void);
     void deviceEvent(DeviceObject *device, ZigBee::Event event, const QJsonObject &json = QJsonObject());
     void endpointUpdated(DeviceObject *device, quint8 endpointId);
     void statusUpdated(const QJsonObject &json);

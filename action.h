@@ -41,9 +41,25 @@ protected:
     QList <quint16> m_attributes;
     QList <QString> m_actions;
 
+    Property endpointProperty(const QString &name = QString());
     QByteArray writeAttribute(quint8 dataType, void *value, size_t length);
     qint8 listIndex(const QList <QString> &list, const QVariant &value);
-    Property endpointProperty(const QString &name = QString());
+    int enumIndex(const QString name, const QVariant &value);
+};
+
+class EnumAction : public ActionObject
+{
+
+public:
+
+    EnumAction(const QString &name, quint16 clusterId, quint16 manufacturerCode, quint16 attributeId, quint8 dataType) :
+        ActionObject(name, clusterId, manufacturerCode, attributeId), m_dataType(dataType) {}
+
+    QByteArray request(const QString &name, const QVariant &data) override;
+
+private:
+
+    quint8 m_dataType;
 
 };
 

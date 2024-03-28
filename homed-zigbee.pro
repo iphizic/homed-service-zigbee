@@ -7,8 +7,8 @@ HEADERS += \
     action.h \
     actions/common.h \
     actions/efekta.h \
+    actions/ias.h \
     actions/lumi.h \
-    actions/modkam.h \
     actions/other.h \
     actions/ptvo.h \
     actions/tuya.h \
@@ -18,13 +18,10 @@ HEADERS += \
     device.h \
     ezsp.h \
     poll.h \
-    properties/byun.h \
     properties/common.h \
     properties/efekta.h \
     properties/ias.h \
-    properties/ikea.h \
     properties/lumi.h \
-    properties/modkam.h \
     properties/other.h \
     properties/ptvo.h \
     properties/tuya.h \
@@ -39,8 +36,8 @@ SOURCES += \
     action.cpp \
     actions/common.cpp \
     actions/efekta.cpp \
+    actions/ias.cpp \
     actions/lumi.cpp \
-    actions/modkam.cpp \
     actions/other.cpp \
     actions/ptvo.cpp \
     actions/tuya.cpp \
@@ -50,13 +47,10 @@ SOURCES += \
     device.cpp \
     ezsp.cpp \
     poll.cpp \
-    properties/byun.cpp \
     properties/common.cpp \
     properties/efekta.cpp \
     properties/ias.cpp \
-    properties/ikea.cpp \
     properties/lumi.cpp \
-    properties/modkam.cpp \
     properties/other.cpp \
     properties/ptvo.cpp \
     properties/tuya.cpp \
@@ -69,10 +63,10 @@ SOURCES += \
 
 DISTFILES += \
     deploy/data/usr/share/homed-zigbee/efekta.json \
-    deploy/data/usr/share/homed-zigbee/expose.json \
     deploy/data/usr/share/homed-zigbee/gledopto.json \
     deploy/data/usr/share/homed-zigbee/gs.json \
     deploy/data/usr/share/homed-zigbee/homed.json \
+    deploy/data/usr/share/homed-zigbee/hue.json \
     deploy/data/usr/share/homed-zigbee/ikea.json \
     deploy/data/usr/share/homed-zigbee/konke.json \
     deploy/data/usr/share/homed-zigbee/lifecontrol.json \

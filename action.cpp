@@ -1,8 +1,7 @@
 #include "actions/common.h"
 #include "actions/efekta.h"
+#include "actions/ias.h"
 #include "actions/lumi.h"
-#include "actions/modkam.h"
-#include "actions/other.h"
 #include "actions/ptvo.h"
 #include "actions/tuya.h"
 #include "device.h"
@@ -14,39 +13,39 @@ void ActionObject::registerMetaTypes(void)
     qRegisterMetaType <Actions::SwitchType>                     ("switchTypeAction");
     qRegisterMetaType <Actions::SwitchMode>                     ("switchModeAction");
     qRegisterMetaType <Actions::Level>                          ("levelAction");
+    qRegisterMetaType <Actions::AnalogOutput>                   ("analogOutputAction");
     qRegisterMetaType <Actions::CoverStatus>                    ("coverStatusAction");
     qRegisterMetaType <Actions::CoverPosition>                  ("coverPositionAction");
     qRegisterMetaType <Actions::CoverTilt>                      ("coverTiltAction");
+    qRegisterMetaType <Actions::Thermostat>                     ("thermostatAction");
+    qRegisterMetaType <Actions::FanMode>                        ("fanModeAction");
+    qRegisterMetaType <Actions::DisplayMode>                    ("displayModeAction");
     qRegisterMetaType <Actions::ColorHS>                        ("colorHSAction");
     qRegisterMetaType <Actions::ColorXY>                        ("colorXYAction");
     qRegisterMetaType <Actions::ColorTemperature>               ("colorTemperatureAction");
-    qRegisterMetaType <Actions::Thermostat>                     ("thermostatAction");
-    qRegisterMetaType <Actions::DisplayMode>                    ("displayModeAction");
+    qRegisterMetaType <Actions::OccupancyTimeout>               ("occupancyTimeoutAction");
 
-    qRegisterMetaType <ActionsLUMI::Thermostat>                 ("lumiThermostatAction");
+    qRegisterMetaType <ActionsIAS::Warning>                     ("iasWarningAction");
+
     qRegisterMetaType <ActionsLUMI::PresenceSensor>             ("lumiPresenceSensorAction");
     qRegisterMetaType <ActionsLUMI::ButtonMode>                 ("lumiButtonModeAction");
     qRegisterMetaType <ActionsLUMI::OperationMode>              ("lumiOperationModeAction");
     qRegisterMetaType <ActionsLUMI::IndicatorMode>              ("lumiIndicatorModeAction");
     qRegisterMetaType <ActionsLUMI::SwitchMode>                 ("lumiSwitchModeAction");
-    qRegisterMetaType <ActionsLUMI::SwitchType>                 ("lumiSwitchTypeAction");
     qRegisterMetaType <ActionsLUMI::SwitchStatusMemory>         ("lumiSwitchStatusMemoryAction");
     qRegisterMetaType <ActionsLUMI::LightStatusMemory>          ("lumiLightStatusMemoryAction");
-    qRegisterMetaType <ActionsLUMI::Interlock>                  ("lumiInterlockAction");
     qRegisterMetaType <ActionsLUMI::CoverPosition>              ("lumiCoverPositionAction");
     qRegisterMetaType <ActionsLUMI::VibrationSensitivity>       ("lumiVibrationSensitivityAction");
 
     qRegisterMetaType <ActionsTUYA::DataPoints>                 ("tuyaDataPointsAction");
-    qRegisterMetaType <ActionsTUYA::WeekdayThermostatProgram>   ("tuyaWeekdayThermostatProgramAction");
     qRegisterMetaType <ActionsTUYA::HolidayThermostatProgram>   ("tuyaHolidayThermostatProgramAction");
+    qRegisterMetaType <ActionsTUYA::DailyThermostatProgram>     ("tuyaDailyThermostatProgramAction");
     qRegisterMetaType <ActionsTUYA::MoesThermostatProgram>      ("tuyaMoesThermostatProgramAction");
     qRegisterMetaType <ActionsTUYA::CoverMotor>                 ("tuyaCoverMotorAction");
     qRegisterMetaType <ActionsTUYA::CoverSwitch>                ("tuyaCoverSwitchAction");
     qRegisterMetaType <ActionsTUYA::ChildLock>                  ("tuyaChildLockAction");
     qRegisterMetaType <ActionsTUYA::OperationMode>              ("tuyaOperationModeAction");
     qRegisterMetaType <ActionsTUYA::IndicatorMode>              ("tuyaIndicatorModeAction");
-    qRegisterMetaType <ActionsTUYA::SensitivityMode>            ("tuyaSensitivityModeAction");
-    qRegisterMetaType <ActionsTUYA::TimeoutMode>                ("tuyaTimeoutModeAction");
     qRegisterMetaType <ActionsTUYA::SwitchType>                 ("tuyaSwitchTypeAction");
     qRegisterMetaType <ActionsTUYA::PowerOnStatus>              ("tuyaPowerOnStatusAction");
 
@@ -57,28 +56,10 @@ void ActionObject::registerMetaTypes(void)
     qRegisterMetaType <ActionsEfekta::PMSensor>                 ("efektaPMSensorAction");
     qRegisterMetaType <ActionsEfekta::VOCSensor>                ("efektaVOCSensorAction");
 
-    qRegisterMetaType <ActionsModkam::TemperatureOffset>        ("modkamTemperatureOffsetAction");
-    qRegisterMetaType <ActionsModkam::HumidityOffset>           ("modkamHumidityOffsetAction");
-    qRegisterMetaType <ActionsModkam::PressureOffset>           ("modkamPressureOffsetAction");
-    qRegisterMetaType <ActionsModkam::CO2Settings>              ("modkamCO2SettingsAction");
-    qRegisterMetaType <ActionsModkam::Geiger>                   ("modkamGeigerAction");
-
     qRegisterMetaType <ActionsPTVO::ChangePattern>              ("ptvoChangePatternAction");
     qRegisterMetaType <ActionsPTVO::Count>                      ("ptvoCountAction");
     qRegisterMetaType <ActionsPTVO::Pattern>                    ("ptvoPatternAction");
     qRegisterMetaType <ActionsPTVO::SerialData>                 ("ptvoSerialDataAction");
-
-    qRegisterMetaType <ActionsOther::PerenioSmartPlug>          ("perenioSmartPlugAction");
-}
-
-QByteArray ActionObject::writeAttribute(quint8 dataType, void *value, size_t length)
-{
-    return writeAttributeRequest(m_transactionId++, m_manufacturerCode, m_attributes.at(0), dataType, QByteArray(reinterpret_cast <char*> (value), length));
-}
-
-qint8 ActionObject::listIndex(const QList<QString> &list, const QVariant &value)
-{
-    return static_cast <qint8> (list.indexOf(value.toString()));
 }
 
 Property ActionObject::endpointProperty(const QString &name)
@@ -97,4 +78,45 @@ Property ActionObject::endpointProperty(const QString &name)
     }
 
     return Property();
+}
+
+QByteArray ActionObject::writeAttribute(quint8 dataType, void *value, size_t length)
+{
+    return writeAttributeRequest(m_transactionId++, m_manufacturerCode, m_attributes.at(0), dataType, QByteArray(reinterpret_cast <char*> (value), length));
+}
+
+qint8 ActionObject::listIndex(const QList <QString> &list, const QVariant &value)
+{
+    return static_cast <qint8> (list.indexOf(value.toString()));
+}
+
+int ActionObject::enumIndex(const QString name, const QVariant &value)
+{
+    QVariant data = option(name).toMap().value("enum");
+
+    switch (data.type())
+    {
+        case QVariant::Map:
+        {
+            QMap <QString, QVariant> map = data.toMap();
+
+            for (auto it = map.begin(); it != map.end(); it++)
+                if (it.value() == value)
+                    return it.key().toInt();
+
+            break;
+        }
+
+        case QVariant::List: return data.toList().indexOf(value.toString());
+        default: break;
+    }
+
+    return -1;
+}
+
+QByteArray EnumAction::request(const QString &, const QVariant &data)
+{
+    int index = enumIndex(m_name, data);
+    quint8 value = static_cast <quint8> (index);
+    return index < 0 ? QByteArray() : writeAttribute(m_dataType, &value, sizeof(value));
 }

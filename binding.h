@@ -92,6 +92,15 @@ namespace Bindings
 
     };
 
+    class AnalogOutput : public BindingObject
+    {
+
+    public:
+
+        AnalogOutput(void) : BindingObject("analogOutput", CLUSTER_ANALOG_OUTPUT) {}
+
+    };
+
     class MultistateInput : public BindingObject
     {
 
@@ -128,6 +137,15 @@ namespace Bindings
 
     };
 
+    class Fan : public BindingObject
+    {
+
+    public:
+
+        Fan(void) : BindingObject("fan", CLUSTER_FAN_CONTROL) {}
+
+    };
+
     class Color : public BindingObject
     {
 
@@ -135,7 +153,7 @@ namespace Bindings
 
         Color(void) : BindingObject("color", CLUSTER_COLOR_CONTROL) {}
 
-    };
+    };    
 
     class Illuminance : public BindingObject
     {
@@ -170,6 +188,15 @@ namespace Bindings
     public:
 
         Humidity(void) : BindingObject("temperature", CLUSTER_HUMIDITY_MEASUREMENT) {}
+
+    };
+
+    class Occupancy : public BindingObject
+    {
+
+    public:
+
+        Occupancy(void) : BindingObject("occupancy", CLUSTER_OCCUPANCY_SENSING) {}
 
     };
 

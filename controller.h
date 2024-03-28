@@ -1,8 +1,8 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION                 "3.6.2"
-#define UPDATE_AVAILABILITY_INTERVAL    10000
+#define SERVICE_VERSION                 "3.7.2"
+#define UPDATE_AVAILABILITY_INTERVAL    5000
 #define UPDATE_PROPERTIES_DELAY         1000
 
 #include "homed.h"
@@ -21,10 +21,10 @@ public:
         restartService,
         setPermitJoin,
         togglePermitJoin,
-        editDevice,
-        removeDevice,
         updateDevice,
-        updateReporting,
+        removeDevice,
+        setupDevice,
+        setupReporting,
         bindDevice,
         unbindDevice,
         addGroup,
@@ -46,9 +46,13 @@ private:
     ZigBee *m_zigbee;
 
     QMetaEnum m_commands;
-    QString m_haStatus;
+    QString m_haPrefix, m_haStatus;
+    bool m_haEnabled, m_networkStarted;
+
+    QMap <QByteArray, qint64> m_lastSeen;
 
     void publishExposes(DeviceObject *device, bool remove = false);
+    void serviceOnline(void);
 
 public slots:
 
@@ -62,6 +66,7 @@ private slots:
     void updateAvailability(void);
     void updateProperties(void);
 
+    void networkStarted(void);
     void deviceEvent(DeviceObject *device, ZigBee::Event event, const QJsonObject &json);
     void endpointUpdated(DeviceObject *device, quint8 endpointId);
     void statusUpdated(const QJsonObject &json);

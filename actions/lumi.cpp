@@ -1,78 +1,23 @@
 #include <QtEndian>
 #include "lumi.h"
 
-QByteArray ActionsLUMI::Thermostat::request(const QString &name, const QVariant &data)
-{
-    switch (m_actions.indexOf(name))
-    {
-        case 0: // systemMode
-        {
-            qint8 value = listIndex({"off", "heat"}, data);
-            m_attributes = {0x0271};
-            return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-        }
-
-        case 1: // operationMode
-        {
-            qint8 value = listIndex({"manual", "away", "program"}, data);
-            m_attributes = {0x0272};
-            return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-        }
-
-        case 2: // windowDetection
-        {
-            quint8 value = data.toBool() ? 0x01 : 0x00;
-            m_attributes = {0x0273};
-            return writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-        }
-
-        case 3: // childLock
-        {
-            quint8 value = data.toBool() ? 0x01 : 0x00;
-            m_attributes = {0x0277};
-            return writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-        }
-
-        case 4: // awayTemperature
-        {
-            quint32 value = qToLittleEndian <quint32> (data.toDouble() * 100);
-            m_attributes = {0x0279};
-            return writeAttribute(DATA_TYPE_32BIT_UNSIGNED, &value, sizeof(value));
-        }
-
-        case 5: // sensorType
-        {
-            qint8 value = listIndex({"internal", "external"}, data);
-            m_attributes = {0x027E};
-            return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-        }
-    }
-
-    return QByteArray();
-}
-
 QByteArray ActionsLUMI::PresenceSensor::request(const QString &name, const QVariant &data)
 {
-    switch (m_actions.indexOf(name))
+    int index = m_actions.indexOf(name);
+
+    switch (index)
     {
-        case 0: // sensitivityMode
+        case 0 ... 2:
         {
-            qint8 value = listIndex({"low", "medium", "high"}, data) + 1;
-            m_attributes = {0x010C};
-            return value < 1 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-        }
+            qint8 value = static_cast <qint8> (enumIndex(name, data));
 
-        case 1: // detectionMode
-        {
-            qint8 value = listIndex({"undirected", "directed"}, data);
-            m_attributes = {0x0144};
-            return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-        }
+            switch (index)
+            {
+                case 0: m_attributes = {0x010C}; break; // sensitivityMode
+                case 1: m_attributes = {0x0144}; break; // detectionMode
+                case 2: m_attributes = {0x0146}; break; // distanceMode
+            }
 
-        case 2: // distanceMode
-        {
-            qint8 value = listIndex({"far", "middle", "near"}, data);
-            m_attributes = {0x0146};
             return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
         }
 
@@ -109,30 +54,6 @@ QByteArray ActionsLUMI::ButtonMode::request(const QString &name, const QVariant 
     return writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
 }
 
-QByteArray ActionsLUMI::OperationMode::request(const QString &, const QVariant &data)
-{
-    qint8 value = listIndex({"command", "event"}, data);
-    return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-}
-
-QByteArray ActionsLUMI::IndicatorMode::request(const QString &, const QVariant &data)
-{
-    qint8 value = listIndex({"default", "inverted"}, data);
-    return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-}
-
-QByteArray ActionsLUMI::SwitchMode::request(const QString &, const QVariant &data)
-{
-    qint8 value = listIndex({"decoupled", "relay"}, data);
-    return value < 0 ? QByteArray() : writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-}
-
-QByteArray ActionsLUMI::SwitchType::request(const QString &, const QVariant &data)
-{
-    qint8 value = listIndex({"toggle", "momentary"}, data) + 1;
-    return value < 1 ? QByteArray() :writeAttribute(DATA_TYPE_8BIT_UNSIGNED, &value, sizeof(value));
-}
-
 QByteArray ActionsLUMI::SwitchStatusMemory::request(const QString &, const QVariant &data)
 {
     quint8 value = data.toBool() ? 0x01 : 0x00;
@@ -140,12 +61,6 @@ QByteArray ActionsLUMI::SwitchStatusMemory::request(const QString &, const QVari
 }
 
 QByteArray ActionsLUMI::LightStatusMemory::request(const QString &, const QVariant &data)
-{
-    quint8 value = data.toBool() ? 0x01 : 0x00;
-    return writeAttribute(DATA_TYPE_BOOLEAN, &value, sizeof(value));
-}
-
-QByteArray ActionsLUMI::Interlock::request(const QString &, const QVariant &data)
 {
     quint8 value = data.toBool() ? 0x01 : 0x00;
     return writeAttribute(DATA_TYPE_BOOLEAN, &value, sizeof(value));
